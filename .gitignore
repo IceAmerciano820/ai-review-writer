@@ -1,0 +1,9 @@
+# 环境变量：真实密钥只放本地 .env 和 Netlify 后台，绝不提交
+.env
+
+# 依赖与 Netlify 本地构建产物
+node_modules
+.netlify
+
+# playwright-cli 调试残留（日志与页面快照）
+.playwright-cli/

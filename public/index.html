@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>医美好评生成器</title>
+<style>
+  :root {
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --accent: #0f766e;
+    --accent-hover: #115e59;
+    --bg: #f7f7f5;
+    --card: #ffffff;
+    --error: #b42318;
+    --error-bg: #fff7f6;
+    --error-line: #f5c2c0;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 40px 16px 64px;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    line-height: 1.6;
+  }
+
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+
+  .sub { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .card > h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+
+  .card > .hint-line {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  input[type="text"],
+  textarea,
+  select {
+    width: 100%;
+    padding: 10px 12px;
+    font: inherit;
+    color: inherit;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  select { cursor: pointer; appearance: none; padding-right: 32px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%236b7280' d='M1 1l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center; }
+
+  input[type="text"]:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, .12);
+  }
+
+  .field { margin-bottom: 16px; }
+  .field:last-of-type { margin-bottom: 20px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  @media (max-width: 560px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  textarea {
+    min-height: 150px;
+    resize: vertical;
+    line-height: 1.8;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font: inherit;
+    font-weight: 600;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: background .15s, opacity .15s;
+  }
+
+  button:disabled { cursor: not-allowed; opacity: .55; }
+
+  button.small { padding: 5px 12px; font-size: 13px; font-weight: 500; }
+
+  button.primary { background: var(--accent); color: #fff; }
+  button.primary:not(:disabled):hover { background: var(--accent-hover); }
+
+  button.ghost {
+    background: #f3f4f6;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  button.ghost:not(:disabled):hover { background: #e5e7eb; }
+
+  button.danger-text {
+    background: transparent;
+    color: var(--error);
+    border: 1px solid var(--error-line);
+  }
+  button.danger-text:not(:disabled):hover { background: var(--error-bg); }
+
+  .status { font-size: 13px; color: var(--muted); }
+  .status.error { color: var(--error); }
+
+  .spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    margin-right: 6px;
+    vertical-align: -1px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .result-card {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+    background: #fcfcfb;
+  }
+
+  .result-card:last-child { margin-bottom: 0; }
+
+  .result-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .result-head .idx { font-size: 13px; font-weight: 600; }
+  .result-head .meta { font-size: 12px; color: var(--muted); }
+
+  .result-foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .count { font-size: 12px; color: var(--muted); }
+
+  .violation {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--error-line);
+    background: var(--error-bg);
+    border-radius: 8px;
+  }
+
+  .violation.hidden { display: none; }
+
+  .violation .warn {
+    color: var(--error);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 0;
+  }
+
+  .violation .preview {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  mark {
+    background: #fde2e1;
+    color: var(--error);
+    font-weight: 600;
+    padding: 0 2px;
+    border-radius: 3px;
+  }
+
+  .empty {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 8px 0;
+  }
+
+  .history-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .history-head h2 { margin: 0; }
+
+  .history-item {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: #fcfcfb;
+  }
+
+  .history-item:last-child { margin-bottom: 0; }
+
+  .history-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .tag {
+    font-size: 12px;
+    color: #374151;
+    background: #f3f4f6;
+    border-radius: 999px;
+    padding: 2px 10px;
+  }
+
+  .tag.time { background: transparent; color: var(--muted); padding: 2px 0; }
+
+  .history-text {
+    font-size: 14px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 10px;
+  }
+
+  .footnote {
+    margin: 20px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>医美好评生成器</h1>
+  <p class="sub">填写项目与机构，选择条数、风格和字数，一键生成大众点评风格的消费者好评。</p>
+
+  <!-- ============ 输入区 ============ -->
+  <section class="card">
+    <div class="field">
+      <label for="project">项目名称</label>
+      <input id="project" type="text" placeholder="例如：热玛吉、光子嫩肤、水光针" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label for="clinic">机构名称</label>
+      <input id="clinic" type="text" placeholder="例如：某某医疗美容门诊部" autocomplete="off" />
+    </div>
+
+    <div class="field grid">
+      <div>
+        <label for="countSelect">生成条数</label>
+        <select id="countSelect">
+          <option value="1">1 条</option>
+          <option value="3" selected>3 条</option>
+          <option value="5">5 条</option>
+        </select>
+      </div>
+      <div>
+        <label for="styleSelect">风格</label>
+        <select id="styleSelect">
+          <option value="亲切自然" selected>亲切自然</option>
+          <option value="专业严谨">专业严谨</option>
+          <option value="活泼简短">活泼简短</option>
+          <option value="精致文艺">精致文艺</option>
+        </select>
+      </div>
+      <div>
+        <label for="lengthSelect">字数</label>
+        <select id="lengthSelect">
+          <option value="短评">短评（50字左右）</option>
+          <option value="中评" selected>中评（100字左右）</option>
+          <option value="长评">长评（200字以上）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <button id="generate" class="primary" type="button">生成好评</button>
+      <span id="status" class="status"></span>
+    </div>
+  </section>
+
+  <!-- ============ 生成结果 ============ -->
+  <section class="card">
+    <h2>生成结果</h2>
+    <p class="hint-line">每条好评都可以单独复制；如检测到违禁词，会高亮并给出提示。</p>
+    <div id="results">
+      <p class="empty">还没有生成内容。</p>
+    </div>
+  </section>
+
+  <!-- ============ 历史记录 ============ -->
+  <section class="card">
+    <div class="history-head">
+      <h2>历史记录（最多保留最近 20 条）</h2>
+      <button id="clearHistory" class="small danger-text" type="button">清空全部</button>
+    </div>
+    <div id="history">
+      <p class="empty">暂无历史记录。</p>
+    </div>
+  </section>
+
+  <p class="footnote">
+    提示：页面只调用本站的 Netlify Function，DeepSeek 的 API Key 保存在服务端环境变量里，不会出现在前端代码中。
+  </p>
+</div>
+
+<script>
+  /* ============ 配置区 ============ */
+
+  // 后端接口：DeepSeek 的调用逻辑和密钥都在这个 Netlify Function 里，前端不接触密钥
+  const FUNCTION_URL = "/.netlify/functions/generate";
+
+  // 历史记录
+  const HISTORY_KEY = "medical_beauty_review_history_v1";
+  const MAX_HISTORY = 20;
+
+  // 违禁词
+  const VIOLATION_WORDS = [
+    "根治", "无痛无痕", "100%安全", "永久", "最好", "第一", "绝对",
+    "包治", "无副作用", "彻底解决", "永不复发", "全国第一", "顶级", "最佳"
+  ];
+
+  /* ============ 风格与字数预设 ============ */
+
+  // 风格取值就是下拉框里的中文标签；字数的取值范围与后端保持一致
+  const LENGTH_PRESETS = {
+    短评: {
+      label: "短评（50字左右）",
+      hint: "约 40-60 字"
+    },
+    中评: {
+      label: "中评（100字左右）",
+      hint: "约 80-120 字"
+    },
+    长评: {
+      label: "长评（200字以上）",
+      hint: "约 200-250 字"
+    }
+  };
+
+  const DEFAULT_LENGTH = "中评";
+
+  /* ============ System Prompt ============ */
+
+  // System Prompt 已经移到后端 netlify/functions/generate.js：
+  // 前端只把 projectName / institutionName / style / length / count 发给它，由它拼装提示词并调用 DeepSeek。
+
+  /* ============ 页面元素 ============ */
+
+  const projectInput = document.getElementById("project");
+  const clinicInput = document.getElementById("clinic");
+  const countSelect = document.getElementById("countSelect");
+  const styleSelect = document.getElementById("styleSelect");
+  const lengthSelect = document.getElementById("lengthSelect");
+  const generateBtn = document.getElementById("generate");
+  const statusEl = document.getElementById("status");
+  const resultsEl = document.getElementById("results");
+  const historyEl = document.getElementById("history");
+  const clearHistoryBtn = document.getElementById("clearHistory");
+
+  /* ============ 通用工具 ============ */
+
+  function setStatus(text, isError) {
+    statusEl.textContent = "";
+    if (text) {
+      if (!isError) {
+        const spinner = document.createElement("span");
+        spinner.className = "spinner";
+        statusEl.appendChild(spinner);
+      }
+      statusEl.appendChild(document.createTextNode(text));
+    }
+    statusEl.classList.toggle("error", Boolean(isError));
+  }
+
+  // 违禁词检测：返回文本中命中的词（去重）
+  function findViolations(text) {
+    return VIOLATION_WORDS.filter(function (word) {
+      return text.indexOf(word) !== -1;
+    });
+  }
+
+  // 把命中的违禁词渲染成高亮
+  function renderHighlighted(container, text, words) {
+    container.textContent = "";
+    if (!words.length) return;
+
+    const sorted = words.slice().sort(function (a, b) { return b.length - a.length; });
+    const escaped = sorted.map(function (word) {
+      return word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    });
+    const parts = text.split(new RegExp("(" + escaped.join("|") + ")", "g"));
+
+    parts.forEach(function (part) {
+      if (sorted.indexOf(part) !== -1) {
+        const mark = document.createElement("mark");
+        mark.textContent = part;
+        container.appendChild(mark);
+      } else {
+        container.appendChild(document.createTextNode(part));
+      }
+    });
+  }
+
+  // 运行违禁词检测并更新提示区
+  function runViolationCheck(text, box, warnEl, previewEl) {
+    const words = findViolations(text);
+    if (!words.length) {
+      box.classList.add("hidden");
+      warnEl.textContent = "";
+      previewEl.textContent = "";
+      return words;
+    }
+
+    box.classList.remove("hidden");
+    warnEl.textContent = "检测到 " + words.length + " 个违禁词：" + words.join("、") + "。请修改后再使用。";
+    renderHighlighted(previewEl, text, words);
+    return words;
+  }
+
+  // 复制到剪贴板，按钮临时显示“已复制”
+  async function copyText(text, button) {
+    if (!text) return;
+    const original = button.dataset.label || button.textContent;
+    button.dataset.label = original;
+
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      const temp = document.createElement("textarea");
+      temp.value = text;
+      temp.style.position = "fixed";
+      temp.style.opacity = "0";
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand("copy");
+      document.body.removeChild(temp);
+    }
+
+    button.textContent = "已复制";
+    setTimeout(function () {
+      if (button.isConnected) button.textContent = original;
+    }, 1800);
+  }
+
+  /* ============ 历史记录（localStorage） ============ */
+
+  function readHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (!raw) return [];
+      const list = JSON.parse(raw);
+      return Array.isArray(list) ? list : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function writeHistory(list) {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+    } catch (err) {
+      // 隐私模式等场景下写入失败，忽略即可
+    }
+  }
+
+  function addHistoryRecords(items, meta, project, clinic) {
+    const list = readHistory();
+
+    items.forEach(function (item) {
+      list.unshift({
+        id: String(Date.now()) + "-" + Math.random().toString(36).slice(2, 8),
+        project: project,
+        clinic: clinic,
+        style: meta.styleLabel,
+        length: meta.lengthLabel,
+        text: item.text,
+        time: new Date().toISOString()
+      });
+    });
+
+    writeHistory(list.slice(0, MAX_HISTORY));
+    renderHistory();
+  }
+
+  function formatTime(iso) {
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return "";
+    const pad = function (n) { return n < 10 ? "0" + n : String(n); };
+    return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate()) +
+      " " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+  }
+
+  function makeTag(text) {
+    const span = document.createElement("span");
+    span.className = "tag";
+    span.textContent = text;
+    return span;
+  }
+
+  function renderHistory() {
+    const list = readHistory();
+    historyEl.textContent = "";
+
+    if (!list.length) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "暂无历史记录。";
+      historyEl.appendChild(empty);
+      return;
+    }
+
+    list.forEach(function (record) {
+      const item = document.createElement("div");
+      item.className = "history-item";
+
+      const top = document.createElement("div");
+      top.className = "history-top";
+
+      const tags = document.createElement("div");
+      tags.className = "tags";
+      if (record.project) tags.appendChild(makeTag(record.project));
+      if (record.clinic) tags.appendChild(makeTag(record.clinic));
+      if (record.style) tags.appendChild(makeTag(record.style));
+      if (record.length) tags.appendChild(makeTag(record.length));
+      top.appendChild(tags);
+
+      const time = document.createElement("span");
+      time.className = "tag time";
+      time.textContent = formatTime(record.time);
+      top.appendChild(time);
+
+      const text = document.createElement("div");
+      text.className = "history-text";
+      text.textContent = record.text;
+
+      const actions = document.createElement("div");
+      actions.className = "row";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "small ghost";
+      copyBtn.textContent = "复制";
+      copyBtn.addEventListener("click", function () {
+        copyText(record.text, copyBtn);
+      });
+
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "small danger-text";
+      delBtn.textContent = "删除";
+      delBtn.addEventListener("click", function () {
+        writeHistory(readHistory().filter(function (r) { return r.id !== record.id; }));
+        renderHistory();
+      });
+
+      actions.appendChild(copyBtn);
+      actions.appendChild(delBtn);
+
+      item.appendChild(top);
+      item.appendChild(text);
+      item.appendChild(actions);
+      historyEl.appendChild(item);
+    });
+  }
+
+  /* ============ 生成结果渲染 ============ */
+
+  function renderResults(items, meta) {
+    resultsEl.textContent = "";
+
+    items.forEach(function (item, index) {
+      const card = document.createElement("div");
+      card.className = "result-card";
+
+      const head = document.createElement("div");
+      head.className = "result-head";
+
+      const idx = document.createElement("span");
+      idx.className = "idx";
+      idx.textContent = "好评 " + (index + 1);
+
+      const info = document.createElement("span");
+      info.className = "meta";
+      info.textContent = meta.styleLabel + " · " + meta.lengthLabel;
+
+      head.appendChild(idx);
+      head.appendChild(info);
+
+      const area = document.createElement("textarea");
+      area.value = item.text;
+      area.setAttribute("aria-label", "好评 " + (index + 1));
+
+      const foot = document.createElement("div");
+      foot.className = "result-foot";
+
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "small ghost";
+      copyBtn.textContent = "复制";
+
+      const countEl = document.createElement("span");
+      countEl.className = "count";
+
+      const updateCount = function () {
+        const value = area.value.trim();
+        countEl.textContent = value ? "共 " + value.length + " 字（目标" + meta.lengthHint + "）" : "";
+      };
+
+      copyBtn.addEventListener("click", function () {
+        copyText(area.value.trim(), copyBtn);
+      });
+
+      const box = document.createElement("div");
+      box.className = "violation hidden";
+
+      const warn = document.createElement("p");
+      warn.className = "warn";
+
+      const preview = document.createElement("div");
+      preview.className = "preview";
+
+      box.appendChild(warn);
+      box.appendChild(preview);
+
+      const check = function () {
+        updateCount();
+        runViolationCheck(area.value.trim(), box, warn, preview);
+      };
+
+      area.addEventListener("input", check);
+
+      foot.appendChild(copyBtn);
+      foot.appendChild(countEl);
+
+      card.appendChild(head);
+      card.appendChild(area);
+      card.appendChild(foot);
+      card.appendChild(box);
+      resultsEl.appendChild(card);
+
+      check();
+    });
+  }
+
+  /* ============ 调用后端接口生成 ============ */
+
+  async function generate() {
+    const project = projectInput.value.trim();
+    const clinic = clinicInput.value.trim();
+    const count = parseInt(countSelect.value, 10) || 3;
+    const style = styleSelect.value;
+    const lengthKey = lengthSelect.value;
+    const length = LENGTH_PRESETS[lengthKey] || LENGTH_PRESETS[DEFAULT_LENGTH];
+
+    if (!project || !clinic) {
+      setStatus("请先填写项目名称和机构名称。", true);
+      return;
+    }
+
+    generateBtn.disabled = true;
+    setStatus("正在生成 " + count + " 条好评，请稍候……", false);
+
+    try {
+      // 只把参数发给自己的后端，密钥和 DeepSeek 调用都在 Function 内部完成
+      const response = await fetch(FUNCTION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectName: project,
+          institutionName: clinic,
+          style: style,
+          length: lengthKey,
+          count: count
+        })
+      });
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (e) {
+        data = null;
+      }
+
+      if (!response.ok) {
+        throw new Error((data && data.error) || ("接口返回 " + response.status));
+      }
+
+      const reviews = data && Array.isArray(data.reviews) ? data.reviews : [];
+      if (!reviews.length) {
+        throw new Error("接口没有返回内容，请重试。");
+      }
+
+      const items = reviews
+        .map(function (text) { return { text: String(text).trim() }; })
+        .filter(function (item) { return item.text.length > 0; });
+
+      if (!items.length) {
+        throw new Error("接口返回的好评内容为空，请重试。");
+      }
+
+      const meta = {
+        styleLabel: style,
+        lengthLabel: length.label,
+        lengthHint: length.hint
+      };
+
+      renderResults(items, meta);
+      addHistoryRecords(items, meta, project, clinic);
+
+      const hitCount = items.filter(function (item) {
+        return findViolations(item.text).length > 0;
+      }).length;
+
+      setStatus(
+        hitCount
+          ? "已生成 " + items.length + " 条，其中 " + hitCount + " 条含违禁词，请看红色提示。"
+          : "已生成 " + items.length + " 条好评，可以复制了。",
+        hitCount > 0
+      );
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      const isNetwork = err instanceof TypeError;
+      setStatus(
+        isNetwork
+          ? "请求失败：连不上后端接口，请确认页面是通过 Netlify（或 netlify dev）打开的。"
+          : "生成失败：" + msg,
+        true
+      );
+    } finally {
+      generateBtn.disabled = false;
+    }
+  }
+
+  /* ============ 事件绑定 ============ */
+
+  generateBtn.addEventListener("click", generate);
+
+  clearHistoryBtn.addEventListener("click", function () {
+    if (!readHistory().length) return;
+    if (window.confirm("确定要清空全部历史记录吗？此操作不可恢复。")) {
+      writeHistory([]);
+      renderHistory();
+    }
+  });
+
+  // 在输入框里按回车也能触发生成
+  [projectInput, clinicInput].forEach(function (input) {
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        generate();
+      }
+    });
+  });
+
+  /* ============ 初始化 ============ */
+
+  renderHistory();
+</script>
+</body>
+</html>
